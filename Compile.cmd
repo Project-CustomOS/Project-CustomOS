@@ -6,14 +6,10 @@ echo ===================================================
 echo.
 
 set "SOURCE_DIR=%~dp0files"
-set "OUTPUT_DIR=%~dp0UefiDisk\EFI\BOOT"
-set "BINARY_NAME=bootx64.efi"
+set "EFI_OUTPUT_DIR=%~dp0UefiDisk\EFI\BOOT"
+set "DISK_ROOT=%~dp0UefiDisk"
 
 echo [1/6] Initializing build environment and paths...
-echo       - Source Directory: %SOURCE_DIR%
-echo       - Target Directory: %OUTPUT_DIR%
-echo.
-
 if not exist "%SOURCE_DIR%" (
     echo [X] Error: 'files' directory not found!
     goto :FAIL
@@ -33,32 +29,36 @@ if not exist "kernel.c" (
 echo       - Detected bootloader.c and kernel.c successfully.
 echo.
 
-echo [3/6] Compiling unified UEFI application via GCC...
-echo       - Target Architecture: x86_64
-echo       - Subsystem: UEFI Application (Subsystem 10)
-echo       - Entry Point: efi_main
-gcc -shared -nostdlib -mno-red-zone -fno-builtin -Wl,-e,efi_main -Wl,--subsystem,10 -mabi=ms -D__X86_64__ -o "%BINARY_NAME%" bootloader.c kernel.c
+echo [3/6] Compiling standalone UEFI bootloader (bootx64.efi)...
+gcc -shared -nostdlib -mno-red-zone -fno-builtin -Wl,-e,efi_main -Wl,--subsystem,10 -mabi=ms -D__X86_64__ -o "bootx64.efi" bootloader.c
 if %ERRORLEVEL% NEQ 0 goto :FAIL
-echo       - Compilation and linking completed with zero errors.
+echo       - Bootloader compilation completed.
 echo.
 
-echo [4/6] Checking target deployment directories...
-if not exist "%OUTPUT_DIR%" (
-    echo       - Output directory missing. Creating path structure...
-    mkdir "%OUTPUT_DIR%"
-) else (
-    echo       - Output directory structure verified.
+echo [4/6] Compiling kernel entry stub and C source into flat binary (kernel.bin)...
+as kernel_entry.s -o kernel_entry.o
+if %ERRORLEVEL% NEQ 0 goto :FAIL
+gcc -ffreestanding -nostdlib -mno-red-zone -fno-asynchronous-unwind-tables -fno-exceptions -fno-stack-protector -c kernel.c -o kernel.o
+if %ERRORLEVEL% NEQ 0 goto :FAIL
+ld -T link.ld --image-base 0x100000 -o kernel.pe kernel_entry.o kernel.o 2>nul
+if %ERRORLEVEL% NEQ 0 goto :FAIL
+objcopy -O binary kernel.pe kernel.bin
+if %ERRORLEVEL% NEQ 0 goto :FAIL
+echo       - Kernel binary generation completed.
+echo.
+
+echo [5/6] Deploying executable binaries to UefiDisk mapping...
+if not exist "%EFI_OUTPUT_DIR%" (
+    mkdir "%EFI_OUTPUT_DIR%"
 )
-echo.
-
-echo [5/6] Deploying executable binary to UefiDisk mapping...
-copy /Y "%BINARY_NAME%" "%OUTPUT_DIR%\%BINARY_NAME%" >nul
+copy /Y "bootx64.efi" "%EFI_OUTPUT_DIR%\bootx64.efi" >nul
+copy /Y "kernel.bin" "%DISK_ROOT%\kernel.bin" >nul
 if %ERRORLEVEL% NEQ 0 goto :FAIL
-echo       - Successfully placed %BINARY_NAME% into EFI\BOOT mapping.
+echo       - Successfully placed bootx64.efi and kernel.bin.
 echo.
 
 echo [6/6] Cleaning up local build workspace artifacts...
-del "%BINARY_NAME%" >nul
+del "bootx64.efi" "kernel.o" "kernel_entry.o" "kernel.elf" "kernel.bin" >nul
 echo       - Local staging area sanitized.
 echo.
 
@@ -70,6 +70,6 @@ exit /b 0
 
 :FAIL
 echo.
-echo [X] Error occurred during compile! Error in code. Check and fix!
+echo [X] Error occurred during compile! Check and fix code.
 pause
 exit /b 1
