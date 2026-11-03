@@ -1,13 +1,15 @@
 How To Build CustomOS and the CustomOS bootloader (Windows)
 
-1. Download all of the files
+1. Download all of the files required
 2. Make a folder somewhere to store all of the files
 3. Place the Compile.cmd script in the root of that folder.
 4. Make a folder called "files" in the root of that folder.
-5. Place all of the .h and .c files into the "files" folder.
-Note: Make sure mingw-w64 is installed to the system PATH! (Windows)
-6. Run the script
-7. Find a way to run the bootx64.efi file. 
+5. Place all of the files in the "files" folder of this repository (files like .c, .h, .s) into your "files" folder.
+
+Note! Make sure mingw-w64 is installed to the system PATH.
+
+6. Run the Compile.cmd script, ensure it completes without any errors.
+7. Find a way to run the bootx64.efi file, probably by running it in a VM (real hardware has not been tested).
    I recommend installing QEMU and running the "Run QEMU.cmd" file also included, because it works perfectly.
 
-8. Launch the VM (preferably by using the Run QEMU.cmd file listed above), and it should be self-explanatory from there.
+It will (at least hopefully) boot into the CustomOS bootloader, from there you can select to Boot CustomOS and then you can use CustomOS!
