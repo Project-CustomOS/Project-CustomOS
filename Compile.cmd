@@ -38,12 +38,18 @@ echo.
 echo [4/6] Compiling kernel entry stub and C source into flat binary (kernel.bin)...
 as kernel_entry.s -o kernel_entry.o
 if %ERRORLEVEL% NEQ 0 goto :FAIL
-gcc -ffreestanding -nostdlib -mno-red-zone -fno-asynchronous-unwind-tables -fno-exceptions -fno-stack-protector -c kernel.c -o kernel.o
+gcc -ffreestanding -nostdlib -mno-red-zone -fno-asynchronous-unwind-tables -fno-exceptions -fno-stack-protector -fno-tree-loop-distribute-patterns -c kernel.c -o kernel.o
 if %ERRORLEVEL% NEQ 0 goto :FAIL
-ld -T link.ld --image-base 0x100000 -o kernel.pe kernel_entry.o kernel.o 2>nul
+ld -T link.ld -e _start --image-base 0 -Map kernel.map -o kernel.pe kernel_entry.o kernel.o
 if %ERRORLEVEL% NEQ 0 goto :FAIL
+nm kernel.pe | findstr /C:"0000000000100000 T _start" >nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [X] Error: kernel entry _start is not linked at 0x100000. Check link.ld and the ld flags.
+    goto :FAIL
+)
 objcopy -O binary kernel.pe kernel.bin
 if %ERRORLEVEL% NEQ 0 goto :FAIL
+for %%F in (kernel.bin) do echo       - kernel.bin is %%~zF bytes.
 echo       - Kernel binary generation completed.
 echo.
 
@@ -58,7 +64,7 @@ echo       - Successfully placed bootx64.efi and kernel.bin.
 echo.
 
 echo [6/6] Cleaning up local build workspace artifacts...
-del "bootx64.efi" "kernel.o" "kernel_entry.o" "kernel.elf" "kernel.bin" >nul
+del "bootx64.efi" "kernel.o" "kernel_entry.o" "kernel.pe" "kernel.map" "kernel.elf" "kernel.bin" >nul 2>nul
 echo       - Local staging area sanitized.
 echo.
 
