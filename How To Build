@@ -1,7 +1,7 @@
 How To Build CustomOS and the CustomOS bootloader (Windows)
 
 1. Download all of the files required
-2. Make a folder somewhere to store all of the files
+2. Make a folder somewhere to store all of the CustomOS files
 3. Place the Compile.cmd script in the root of that folder.
 4. Make a folder called "files" in the root of that folder.
 5. Place all of the files in the "files" folder of this repository (files like .c, .h, .s) into your "files" folder.
