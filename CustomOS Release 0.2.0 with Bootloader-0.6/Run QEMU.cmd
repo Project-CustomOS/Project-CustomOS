@@ -1,0 +1,1 @@
+"C:\Program Files\qemu\qemu-system-x86_64.exe" -drive if=pflash,format=raw,file="C:\Program Files\qemu\share\edk2-x86_64-code.fd" -drive file=fat:rw:UefiDisk,format=raw

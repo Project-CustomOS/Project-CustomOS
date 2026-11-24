@@ -1,0 +1,57 @@
+CustomOS - Commands update ("one interpreter file, one commands file, 60 commands")
+=================================================================================
+
+HOW TO APPLY
+  1. Copy everything in this zip over your project (the "files" folder and Compile.cmd).
+     Your Run QEMU.cmd is unchanged.
+  2. Run Compile.cmd, then Run QEMU.cmd as usual.
+  Nothing needs deleting. Compile.cmd now builds two C files (kernel.c and commands.c).
+
+ARCHITECTURE
+  files\kernel.c    the command-line interpreter ONLY: reads a line, splits it into words,
+                    looks the command up in the table, runs it. Prompt, history, main loop.
+                    You should not need to touch it again until the program-loader update.
+  files\commands.c  every command, every helper, and the command table (bottom of the file).
+                    A new command = one cmd_xxx() function + ONE line in the table.
+  files\shell.h     the small contract between the two (the SHELL struct, the CMD table entry,
+                    the few functions they share, and OS_VERSION - the one place the version lives).
+  files\efi.h       more typed UEFI definitions (text modes, file-system info, runtime clock and
+                    variables, configuration tables, ACPI/SMBIOS GUIDs). Nothing removed.
+  files\kernel_entry.s  now also contains a tiny ___chkstk_ms stub. MinGW's gcc calls it in any
+                    function with 4 KB or more of local variables; without it the link fails
+                    with "undefined reference to ___chkstk_ms". (The firmware stack is already
+                    fully mapped, so the stub has nothing to do.)
+
+"help" now lists the commands in four groups (Files, Shell, System, Tools).
+  help <command>   details for one command, as before
+  help files       a whole group with one-line summaries (also: shell, system, tools)
+
+NEW COMMANDS (44), plain-word names, no DOS aliases
+  Files    touch  more  head  tail  count  sort  compare  checksum  hexdump  find  search
+           tree  write  append  attributes
+  Shell    version  date  time  pause  sleep  prompt  history
+  System   memory  memmap  uptime  cpuinfo  diskinfo  devices  pci  acpi  smbios  bootorder
+           efivars  screeninfo  textmode
+  Tools    calc  calendar  random  banner  beep  upper  lower  reverse  length
+
+  Long listings (more, head, tail, sort, find, search, tree, hexdump, memmap, pci, acpi, efivars,
+  help <group>) pause with "-- More --": any key = next page, Q or Esc = stop.
+
+  find     * and ? wildcards; without them it matches names that CONTAIN the text
+  search   text inside files, line numbers, ignores case; no file given = all files in this folder
+  write / append   end the text with a line break; write asks before replacing an existing file
+  attributes       +r/-r read-only, +h/-h hidden, +s/-s system, +a/-a archive
+  hexdump  16 bytes per line; optional offset and length, decimal or 0x hex
+  calc     whole numbers, + - * / % ( ) | ^ & << >> ~, decimal or 0x hex, 64-bit, overflow detected
+  prompt   changes the text before the folder name ("prompt MyPC:"); "prompt reset" restores it
+  pci/beep talk to hardware ports directly (PCI config space; PC speaker)
+
+PROTECTED FILES
+  touch / write / append / attributes ask the same "This is a protected system file!" question
+  for \EFI, \kernel.bin and \NvVars as copy / move / del / rename do.
+
+UNCHANGED ON PURPOSE
+  Every existing command behaves as before (cd, list, type, copy, move, del, mkdir, rename, color,
+  echo, clear, reboot, shutdown, about, systeminfo). Not done yet, as agreed: systeminfo extras,
+  line editor (arrow keys / Tab), wildcards for copy/move/del, the version number bump, the
+  program loader, networking, scripts, the editor.
